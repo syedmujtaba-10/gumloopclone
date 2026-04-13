@@ -107,9 +107,24 @@ async function executeNode(
       const { createAnthropic } = await import("@ai-sdk/anthropic");
       const { generateText } = await import("ai");
       const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-      const prompt = resolveTemplate(String(config.prompt ?? "{{input}}"), outputs);
+      const rawPrompt = String(config.prompt ?? "{{input}}");
+      let prompt = resolveTemplate(rawPrompt, outputs);
       const systemPrompt = String(config.systemPrompt ?? "You are a helpful assistant.");
       const model = String(config.model ?? "claude-haiku-4-5-20251001");
+
+      // If the template resolved to empty (e.g. wrong node ID referenced),
+      // fall back to the last preceding node's output so the run doesn't fail silently
+      if (!prompt.trim()) {
+        const entries = [...outputs.entries()].filter(([k]) => k !== "__input__");
+        const lastOutput = entries[entries.length - 1]?.[1];
+        prompt = lastOutput !== undefined ? String(lastOutput) : "";
+      }
+
+      if (!prompt.trim()) {
+        throw new Error(
+          `LLM prompt is empty. Check your template — use {{nodeId}} with the exact node ID shown in the config panel header.`
+        );
+      }
 
       const { text } = await generateText({
         model: anthropic(model),

@@ -35,11 +35,20 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
   return (
     <div className="absolute right-0 top-0 h-full w-80 bg-[#0d0d12]/95 backdrop-blur-xl border-l border-white/[0.08] z-10 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-white/[0.06] flex-shrink-0">
-        <h3 className="text-sm font-medium text-white/80">Configure Node</h3>
-        <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white/60 transition-colors rounded">
-          <X className="w-4 h-4" />
-        </button>
+      <div className="border-b border-white/[0.06] flex-shrink-0">
+        <div className="h-14 flex items-center justify-between px-4">
+          <h3 className="text-sm font-medium text-white/80">Configure Node</h3>
+          <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white/60 transition-colors rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {/* Node ID — shown so users can reference it in templates like {{nodeId}} */}
+        <div className="px-4 pb-2.5 flex items-center gap-2">
+          <span className="text-[10px] text-white/25 uppercase tracking-wider">ID</span>
+          <code className="text-[11px] font-mono text-violet-400/70 bg-violet-500/10 px-1.5 py-0.5 rounded select-all truncate">
+            {node.id}
+          </code>
+        </div>
       </div>
 
       {/* Config fields */}
@@ -98,7 +107,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
                 rows={4}
                 className="bg-white/5 border-white/10 text-white/75 placeholder:text-white/20 text-xs font-mono resize-none"
               />
-              <p className="text-[10px] text-white/25">Use {"{{nodeId}}"} to reference other nodes</p>
+              <p className="text-[10px] text-white/25">Use <span className="font-mono text-violet-400/50">{"{{nodeId}}"}</span> to reference another node — copy the ID from its config panel header.</p>
             </div>
           </>
         )}
