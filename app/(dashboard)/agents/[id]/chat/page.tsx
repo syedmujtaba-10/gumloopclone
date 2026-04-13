@@ -31,8 +31,13 @@ export default function ChatPage() {
   useEffect(() => {
     fetch(`/api/agents/${agentId}`)
       .then((r) => r.json())
-      .then(({ data }) => { setAgent(data); setLoadingAgent(false); })
+      .then(({ data }) => {
+        setAgent(data);
+        setLoadingAgent(false);
+        if (data?.name) document.title = `Chat — ${data.emoji ?? ""} ${data.name} — Gumloop`;
+      })
       .catch(() => setLoadingAgent(false));
+    return () => { document.title = "Gumloop — AI Automation Platform"; };
   }, [agentId]);
 
   // AI SDK v6: configure transport instead of passing api/body/onResponse to useChat

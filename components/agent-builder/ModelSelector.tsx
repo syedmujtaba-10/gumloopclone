@@ -48,7 +48,7 @@ export function ModelSelector({ value, onChange }: Props) {
           </span>
           <ChevronDown className="w-4 h-4 text-white/30" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 glass border-white/10 bg-[#0f0f14]">
+        <DropdownMenuContent className="w-64">
           {MODEL_OPTIONS.map((group, i) => (
             <DropdownMenuGroup key={group.group}>
               {i > 0 && <DropdownMenuSeparator className="bg-white/6" />}

@@ -24,7 +24,8 @@ import { CodeNode } from "./nodes/CodeNode";
 import { ConditionNode } from "./nodes/ConditionNode";
 import { OutputNode } from "./nodes/OutputNode";
 
-const nodeTypes = {
+// Defined outside component so the reference is stable across renders (React Flow requirement)
+const NODE_TYPES = {
   trigger: TriggerNode,
   llm: LLMNode,
   http_request: HTTPNode,
@@ -39,6 +40,7 @@ interface Props {
   nodeStatuses: Record<string, "running" | "success" | "error">;
   nodeOutputs?: Record<string, unknown>;
   onNodesEdgesChange: (nodes: Node[], edges: Edge[]) => void;
+  isRunning?: boolean;
 }
 
 export function WorkflowCanvas({
@@ -47,6 +49,7 @@ export function WorkflowCanvas({
   nodeStatuses,
   nodeOutputs = {},
   onNodesEdgesChange,
+  isRunning = false,
 }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -110,6 +113,10 @@ export function WorkflowCanvas({
         n.id === nodeId ? { ...n, data: { ...n.data, config } } : n
       )
     );
+    // Keep selectedNode in sync so the panel reflects the latest data
+    setSelectedNode((prev) =>
+      prev?.id === nodeId ? { ...prev, data: { ...prev.data, config } } : prev
+    );
     const updatedNodes = nodes.map((n) =>
       n.id === nodeId ? { ...n, data: { ...n.data, config } } : n
     );
@@ -126,10 +133,13 @@ export function WorkflowCanvas({
         onConnect={onConnect}
         onNodeClick={(_, node) => setSelectedNode(node)}
         onPaneClick={() => setSelectedNode(null)}
-        nodeTypes={nodeTypes}
+        nodeTypes={NODE_TYPES}
         fitView
         fitViewOptions={{ padding: 0.3 }}
-        deleteKeyCode="Delete"
+        deleteKeyCode={isRunning ? null : "Delete"}
+        nodesDraggable={!isRunning}
+        nodesConnectable={!isRunning}
+        elementsSelectable={!isRunning}
         className="bg-transparent"
       >
         <Background
@@ -156,9 +166,10 @@ export function WorkflowCanvas({
         </Panel>
       </ReactFlow>
 
-      {/* Config panel */}
+      {/* Config panel — key forces remount when selected node changes so useState reinitializes */}
       {selectedNode && (
         <NodeConfigPanel
+          key={selectedNode.id}
           node={selectedNode}
           lastOutput={nodeOutputs[selectedNode.id]}
           onUpdate={(config) => updateNodeConfig(selectedNode.id, config)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -31,8 +31,10 @@ export default function AgentBuilderPage() {
         setAgent(data);
         setWorkflows(wf ?? []);
         setLoading(false);
+        if (data?.name) document.title = `${data.emoji ?? ""} ${data.name} — Gumloop`;
       })
       .catch(() => { toast.error("Failed to load agent"); router.push("/agents"); });
+    return () => { document.title = "Gumloop — AI Automation Platform"; };
   }, [id, router]);
 
   function updateAgent(patch: Partial<Agent>) {
@@ -40,7 +42,7 @@ export default function AgentBuilderPage() {
     setAgent({ ...agent, ...patch });
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!agent) return;
     setSaving(true);
     const res = await fetch(`/api/agents/${id}`, {
@@ -66,7 +68,18 @@ export default function AgentBuilderPage() {
       console.error("[PUT /api/agents] error", body);
       toast.error("Failed to save agent");
     }
-  }
+  }, [agent, id]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSave]);
 
   if (loading) {
     return (

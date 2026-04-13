@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { executeWorkflow } from "@/lib/workflow/executor";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 120;
 
@@ -10,6 +11,14 @@ export async function POST(
   { params }: { params: Promise<{ secret: string }> }
 ) {
   const { secret } = await params;
+
+  const rl = checkRateLimit(`webhook:${secret}`, 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
 
   // Find workflow by webhook secret
   const workflow = await prisma.workflow.findUnique({

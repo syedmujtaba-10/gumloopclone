@@ -33,7 +33,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
   const nodeType = node.data.nodeType ?? node.type;
 
   return (
-    <div className="absolute right-0 top-0 h-full w-80 glass-strong border-l border-white/8 z-10 flex flex-col overflow-hidden">
+    <div className="absolute right-0 top-0 h-full w-80 bg-[#0d0d12]/95 backdrop-blur-xl border-l border-white/[0.08] z-10 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/[0.06] flex-shrink-0">
         <h3 className="text-sm font-medium text-white/80">Configure Node</h3>
@@ -53,7 +53,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
               <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#111116] border-white/10">
+              <SelectContent className="">
                 <SelectItem value="manual">▶ Manual</SelectItem>
                 <SelectItem value="webhook">🔗 Webhook</SelectItem>
               </SelectContent>
@@ -70,7 +70,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
                 <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#111116] border-white/10">
+                <SelectContent className="">
                   <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5</SelectItem>
                   <SelectItem value="claude-sonnet-4-6">Claude Sonnet 4.6</SelectItem>
                   <SelectItem value="claude-opus-4-6">Claude Opus 4.6</SelectItem>
@@ -113,7 +113,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
                   <SelectTrigger className="bg-white/5 border-white/10 text-white/75 mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#111116] border-white/10">
+                  <SelectContent className="">
                     {["GET","POST","PUT","DELETE","PATCH"].map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
@@ -190,7 +190,7 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
                 <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#111116] border-white/10">
+                <SelectContent className="">
                   <SelectItem value="text">Plain Text</SelectItem>
                   <SelectItem value="json">JSON</SelectItem>
                   <SelectItem value="markdown">Markdown</SelectItem>

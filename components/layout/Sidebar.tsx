@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { href: "/runs", label: "Run History", icon: History },
 ];
 
-export function Sidebar() {
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -43,12 +43,11 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-14 flex flex-col h-screen sticky top-0 border-r border-white/[0.06] bg-black/20 backdrop-blur-xl">
+    <>
       {/* Logo */}
       <div className="h-14 flex items-center justify-center border-b border-white/[0.06]">
         <Tooltip>
-          {/* base-ui: use render prop instead of asChild */}
-          <TooltipTrigger render={<Link href="/" className="flex items-center justify-center" />}>
+          <TooltipTrigger render={<Link href="/" onClick={onNavigate} className="flex items-center justify-center" />}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-md shadow-violet-500/20 transition-transform duration-200 hover:scale-105">
               <Zap className="w-4 h-4 text-white" />
             </div>
@@ -69,6 +68,7 @@ export function Sidebar() {
                 render={
                   <Link
                     href={href}
+                    onClick={onNavigate}
                     className={cn(
                       "relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200",
                       active
@@ -91,7 +91,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Logout — TooltipTrigger already renders a <button>, just pass props directly */}
+      {/* Logout */}
       <div className="pb-3 flex justify-center border-t border-white/[0.06] pt-3">
         <Tooltip>
           <TooltipTrigger
@@ -105,6 +105,14 @@ export function Sidebar() {
           </TooltipContent>
         </Tooltip>
       </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="w-14 hidden md:flex flex-col h-screen sticky top-0 border-r border-white/[0.06] bg-black/20 backdrop-blur-xl">
+      <SidebarNav />
     </aside>
   );
 }

@@ -249,6 +249,15 @@
   background-color: oklch(0.08 0.01 270) !important;
 }
 
+/* Strip React Flow's default white node background so glass-card shows correctly */
+.react-flow__node {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .react-flow__edge-path {
   stroke: rgba(139, 92, 246, 0.4) !important;
   stroke-width: 2 !important;

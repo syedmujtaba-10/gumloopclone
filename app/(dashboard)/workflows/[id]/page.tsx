@@ -21,15 +21,27 @@ export default function WorkflowEditorPage() {
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, "running" | "success" | "error">>({});
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, unknown>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Always-current nodes/edges for Cmd+S (canvas manages its own state)
+  const latestNodesRef = useRef<Node[]>([]);
+  const latestEdgesRef = useRef<Edge[]>([]);
 
   useEffect(() => {
     fetch(`/api/workflows/${id}`)
       .then((r) => r.json())
-      .then(({ data }) => { setWorkflow(data); setLoading(false); })
+      .then(({ data }) => {
+        setWorkflow(data);
+        setLoading(false);
+        if (data?.name) document.title = `${data.emoji ?? ""} ${data.name} — Gumloop`;
+      })
       .catch(() => { toast.error("Failed to load workflow"); router.push("/workflows"); });
+    return () => { document.title = "Gumloop — AI Automation Platform"; };
   }, [id, router]);
 
   const saveNodes = useCallback((nodes: Node[], edges: Edge[]) => {
+    // Keep refs current so Cmd+S always saves the latest canvas state
+    latestNodesRef.current = nodes;
+    latestEdgesRef.current = edges;
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaved(false);
     saveTimer.current = setTimeout(async () => {
@@ -46,6 +58,35 @@ export default function WorkflowEditorPage() {
       }
     }, 1000);
   }, [id]);
+
+  const handleSave = useCallback(async () => {
+    const nodes = latestNodesRef.current;
+    const edges = latestEdgesRef.current;
+    if (!nodes.length && !edges.length) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaving(true);
+    const res = await fetch(`/api/workflows/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nodes, edges }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSave]);
 
   async function handleRun() {
     setRunning(true);
@@ -174,6 +215,7 @@ export default function WorkflowEditorPage() {
           nodeStatuses={nodeStatuses}
           nodeOutputs={nodeOutputs}
           onNodesEdgesChange={saveNodes}
+          isRunning={running}
         />
       </div>
     </div>

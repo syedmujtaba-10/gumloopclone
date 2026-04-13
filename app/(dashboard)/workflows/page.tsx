@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { NewItemDialog } from "@/components/layout/NewItemDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 
 type WorkflowWithCount = {
@@ -41,6 +42,11 @@ type WorkflowWithCount = {
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<WorkflowWithCount[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = "Workflows — Gumloop";
+    return () => { document.title = "Gumloop — AI Automation Platform"; };
+  }, []);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
@@ -111,8 +117,22 @@ export default function WorkflowsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-white/30" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="glass-card p-5 flex flex-col gap-3">
+              <div className="flex items-start justify-between">
+                <Skeleton className="w-9 h-9 rounded-md" />
+                <Skeleton className="w-6 h-6 rounded" />
+              </div>
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+              <div className="flex gap-2 mt-1">
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -154,7 +174,7 @@ export default function WorkflowsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="glass border-white/10 text-white/70 bg-[#111116]"
+                      className="text-white/70"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <DropdownMenuItem

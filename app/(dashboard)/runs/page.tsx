@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+
+export const metadata: Metadata = { title: "Run History — Gumloop" };
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";

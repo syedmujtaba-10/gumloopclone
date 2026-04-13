@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { buildToolset } from "@/lib/tools";
 import { upsertUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 120;
 
@@ -24,6 +25,14 @@ export async function POST(req: NextRequest) {
 
   if (!user?.email) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
+  const rl = checkRateLimit(`chat:${user.id}`, 20, 60_000);
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": String(rl.retryAfter) },
+    });
   }
 
   const body = await req.json();
