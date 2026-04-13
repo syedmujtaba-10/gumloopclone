@@ -193,6 +193,15 @@ async function executeNode(
       }
     }
 
+    case "scrape": {
+      const url = resolveTemplate(String(config.url ?? ""), outputs);
+      if (!url.trim()) throw new Error("Scrape node: URL is empty");
+      const format = (config.format as "markdown" | "text") ?? "markdown";
+      const { scrapeUrl } = await import("@/lib/tools/firecrawl");
+      const result = await scrapeUrl(url, format);
+      return result;
+    }
+
     case "output": {
       const rawTemplate = config.template;
       const template = (typeof rawTemplate === "string" && rawTemplate.trim()) ? rawTemplate : "{{input}}";

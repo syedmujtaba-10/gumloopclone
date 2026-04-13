@@ -82,10 +82,17 @@ export default function ChatPage() {
     }
   }, [messages, isLoading]);
 
-  async function handleSend(text: string) {
+  async function handleSend(text: string, files?: File[]) {
     setSuggestions([]);
     prevMessageCount.current = messages.length;
-    await sendMessage({ text });
+    if (files && files.length > 0) {
+      // Convert File[] → FileList via DataTransfer (browser API)
+      const dt = new DataTransfer();
+      for (const f of files) dt.items.add(f);
+      await sendMessage({ text, files: dt.files });
+    } else {
+      await sendMessage({ text });
+    }
   }
 
   async function handleSuggestionClick(suggestion: string) {

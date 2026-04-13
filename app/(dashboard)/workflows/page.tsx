@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { NewItemDialog } from "@/components/layout/NewItemDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { WORKFLOW_TEMPLATES } from "@/lib/workflow-templates";
 
 type WorkflowWithCount = {
   id: string;
@@ -60,11 +61,16 @@ export default function WorkflowsPage() {
 
   useEffect(() => { fetchWorkflows(); }, [fetchWorkflows]);
 
-  async function handleCreate(name: string, emoji: string) {
+  async function handleCreate(name: string, emoji: string, templateId?: string) {
+    const template = templateId ? WORKFLOW_TEMPLATES.find((t) => t.id === templateId) : undefined;
     const res = await fetch("/api/workflows", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, emoji }),
+      body: JSON.stringify({
+        name,
+        emoji,
+        ...(template ? { nodes: template.nodes, edges: template.edges } : {}),
+      }),
     });
     const json = await res.json();
     if (!res.ok) { toast.error("Failed to create workflow"); return; }
@@ -220,6 +226,7 @@ export default function WorkflowsPage() {
         title="New Workflow"
         placeholder="Email Summarizer"
         defaultEmoji="⚡"
+        templates={WORKFLOW_TEMPLATES}
       />
     </div>
   );

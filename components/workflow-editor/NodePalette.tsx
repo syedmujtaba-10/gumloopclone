@@ -1,11 +1,12 @@
 "use client";
 
-import { Zap, Brain, Globe, Code2, GitBranch, Flag } from "lucide-react";
+import { Zap, Brain, Globe, Globe2, Code2, GitBranch, Flag } from "lucide-react";
 
 const NODE_TYPES = [
   { type: "trigger", label: "Trigger", icon: Zap, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
   { type: "llm", label: "AI / LLM", icon: Brain, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
   { type: "http_request", label: "HTTP Request", icon: Globe, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  { type: "scrape", label: "Scrape URL", icon: Globe2, color: "text-teal-400", bg: "bg-teal-500/10 border-teal-500/20" },
   { type: "code", label: "Code", icon: Code2, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
   { type: "condition", label: "Condition", icon: GitBranch, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
   { type: "output", label: "Output", icon: Flag, color: "text-pink-400", bg: "bg-pink-500/10 border-pink-500/20" },

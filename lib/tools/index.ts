@@ -1,4 +1,5 @@
 import { webSearchTool } from "./web-search";
+import { webScrapeTool } from "./web-scrape";
 import { httpRequestTool } from "./http-request";
 import { sandboxPythonTool } from "./sandbox-python";
 import { sandboxShellTool } from "./sandbox-shell";
@@ -22,6 +23,9 @@ export async function buildToolset(agent: Agent, conversationId: string): Promis
     switch (toolName) {
       case "web_search":
         tools.web_search = webSearchTool;
+        break;
+      case "web_scrape":
+        tools.web_scrape = webScrapeTool;
         break;
       case "http_request":
         tools.http_request = httpRequestTool;

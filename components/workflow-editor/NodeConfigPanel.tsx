@@ -152,6 +152,34 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
           </>
         )}
 
+        {/* Scrape URL */}
+        {nodeType === "scrape" && (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">URL</Label>
+              <Input
+                value={String(config.url ?? "")}
+                onChange={(e) => set("url", e.target.value)}
+                placeholder="https://example.com"
+                className="bg-white/5 border-white/10 text-white/75 placeholder:text-white/20 text-xs font-mono"
+              />
+              <p className="text-[10px] text-white/25">Supports <span className="font-mono text-teal-400/50">{"{{nodeId}}"}</span> templates</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Output Format</Label>
+              <Select value={String(config.format ?? "markdown")} onValueChange={(v) => set("format", v)}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="">
+                  <SelectItem value="markdown">Markdown</SelectItem>
+                  <SelectItem value="text">Plain Text</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
         {/* Code */}
         {nodeType === "code" && (
           <div className="space-y-1.5">

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import type { UIMessage } from "ai";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { ToolCallCard, type ToolCallPart } from "./ToolCallCard";
+import { ToolCallCard, getToolMeta, type ToolCallPart } from "./ToolCallCard";
 import { CopyButton } from "./CopyButton";
-import { User, Bot, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import { User, Bot, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -57,21 +57,32 @@ export function MessageBubble({ message, isStreaming }: Props) {
         {/* Tool calls — collapsible Gumloop-style section */}
         {hasTools && (
           <div className="w-full glass rounded-xl border border-white/[0.06] overflow-hidden">
-            {/* Header */}
+            {/* Header — show one icon chip per unique tool used */}
             <button
               onClick={() => setToolsExpanded((v) => !v)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/3 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
             >
-              <Wrench className="w-3.5 h-3.5 text-violet-400/70 flex-shrink-0" />
-              <span className="text-xs text-white/50 flex-1">
+              {/* Deduplicated tool icon chips */}
+              <div className="flex items-center gap-1 flex-wrap">
+                {Array.from(new Set(toolParts.map((p) => p.type.startsWith("tool-") ? p.type.slice(5) : p.type))).map((name) => {
+                  const meta = getToolMeta(name);
+                  const Icon = meta.icon;
+                  return (
+                    <div key={name} className={cn("w-5 h-5 rounded-md flex items-center justify-center", meta.bg)}>
+                      <Icon className={cn("w-3 h-3", meta.color)} />
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="text-xs text-white/40 flex-1">
                 {runningCount > 0
                   ? `Using ${runningCount} tool${runningCount > 1 ? "s" : ""}…`
                   : `${completedCount} tool call${completedCount !== 1 ? "s" : ""}`}
               </span>
               {toolsExpanded ? (
-                <ChevronDown className="w-3 h-3 text-white/25" />
+                <ChevronDown className="w-3 h-3 text-white/20" />
               ) : (
-                <ChevronRight className="w-3 h-3 text-white/25" />
+                <ChevronRight className="w-3 h-3 text-white/15" />
               )}
             </button>
 

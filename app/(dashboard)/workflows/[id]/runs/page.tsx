@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, CheckCircle2, XCircle, Clock, Loader2, Play, Webhook } from "lucide-react";
+import { ChevronLeft, CheckCircle2, XCircle, Clock, Loader2, Play, Webhook, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +18,7 @@ interface Run {
   finishedAt: string | null;
   error: string | null;
   output: unknown;
+  input?: unknown;
   nodeResults: Array<{ nodeId: string; nodeType: string; durationMs: number; output: unknown; error: string | null }> | null;
 }
 
@@ -36,9 +39,30 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function WorkflowRunsPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [rerunningId, setRerunningId] = useState<string | null>(null);
+
+  async function handleRerun(run: Run, e: React.MouseEvent) {
+    e.stopPropagation();
+    setRerunningId(run.id);
+    try {
+      const res = await fetch(`/api/workflows/${id}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: (run as Run & { input?: unknown }).input ?? {} }),
+      });
+      if (!res.ok) throw new Error("Failed to re-run");
+      toast.success("Re-run started — watch it live in the editor");
+      router.push(`/workflows/${id}`);
+    } catch {
+      toast.error("Failed to re-run workflow");
+    } finally {
+      setRerunningId(null);
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/workflows/${id}/runs`)
@@ -77,9 +101,9 @@ export default function WorkflowRunsPage() {
 
             return (
               <div key={run.id} className="glass-card overflow-hidden">
-                {/* Run header */}
-                <button
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-white/[0.02] transition-colors"
+                {/* Run header — div instead of button to allow nested button (Re-run) */}
+                <div
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
                   onClick={() => setExpandedRun(expanded ? null : run.id)}
                 >
                   <StatusBadge status={run.status} />
@@ -98,8 +122,22 @@ export default function WorkflowRunsPage() {
                   {run.error && (
                     <span className="text-xs text-red-400/70 truncate max-w-48">{run.error}</span>
                   )}
+                  {run.status !== "running" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-white/30 hover:text-white/70 hover:bg-white/5 gap-1 text-[11px]"
+                      onClick={(e) => handleRerun(run, e)}
+                      disabled={rerunningId === run.id}
+                    >
+                      {rerunningId === run.id
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <RotateCcw className="w-3 h-3" />}
+                      Re-run
+                    </Button>
+                  )}
                   <ChevronLeft className={cn("w-3.5 h-3.5 text-white/20 transition-transform", expanded && "rotate-90")} />
-                </button>
+                </div>
 
                 {/* Expanded: node results */}
                 {expanded && run.nodeResults && (

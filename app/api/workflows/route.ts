@@ -9,6 +9,8 @@ const CreateWorkflowSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   emoji: z.string().optional(),
+  nodes: z.array(z.unknown()).optional(),
+  edges: z.array(z.unknown()).optional(),
 });
 
 // GET /api/workflows
@@ -53,8 +55,10 @@ export async function POST(req: NextRequest) {
       description: parsed.data.description ?? null,
       emoji: parsed.data.emoji ?? "⚡",
       webhookSecret: randomUUID(),
-      nodes: [],
-      edges: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- template nodes/edges are untyped JSON
+      nodes: (parsed.data.nodes as any) ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      edges: (parsed.data.edges as any) ?? [],
     },
   });
 

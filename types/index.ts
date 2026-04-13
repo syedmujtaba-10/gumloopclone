@@ -11,10 +11,13 @@ export type AgentWithConversationCount = Agent & {
 
 export type ToolName =
   | "web_search"
+  | "web_scrape"
   | "http_request"
   | "sandbox_python"
   | "sandbox_shell"
   | "sandbox_file";
+
+
 
 export const ALL_TOOLS: { id: ToolName; label: string; description: string; icon: string }[] = [
   {
@@ -47,6 +50,12 @@ export const ALL_TOOLS: { id: ToolName; label: string; description: string; icon
     description: "Read and write files in the VM filesystem",
     icon: "FolderOpen",
   },
+  {
+    id: "web_scrape",
+    label: "Web Scrape",
+    description: "Scrape any URL and read its content as clean markdown",
+    icon: "Globe2",
+  },
 ];
 
 export const MODEL_OPTIONS = [
@@ -75,6 +84,7 @@ export type NodeType =
   | "http_request"
   | "code"
   | "condition"
+  | "scrape"
   | "output";
 
 export interface WorkflowNodeData {

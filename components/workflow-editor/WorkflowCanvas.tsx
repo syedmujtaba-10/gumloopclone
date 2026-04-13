@@ -20,6 +20,7 @@ import { NodePalette } from "./NodePalette";
 import { TriggerNode } from "./nodes/TriggerNode";
 import { LLMNode } from "./nodes/LLMNode";
 import { HTTPNode } from "./nodes/HTTPNode";
+import { ScrapeNode } from "./nodes/ScrapeNode";
 import { CodeNode } from "./nodes/CodeNode";
 import { ConditionNode } from "./nodes/ConditionNode";
 import { OutputNode } from "./nodes/OutputNode";
@@ -29,6 +30,7 @@ const NODE_TYPES = {
   trigger: TriggerNode,
   llm: LLMNode,
   http_request: HTTPNode,
+  scrape: ScrapeNode,
   code: CodeNode,
   condition: ConditionNode,
   output: OutputNode,

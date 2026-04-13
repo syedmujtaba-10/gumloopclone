@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, stepCountIs, type ModelMessage } from "ai";
+import { streamText, stepCountIs, convertToModelMessages, type UIMessage } from "ai";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { buildToolset } from "@/lib/tools";
@@ -39,16 +39,11 @@ export async function POST(req: NextRequest) {
   const {
     agentId,
     conversationId: existingConvId,
-    // v6 sends messages array of UIMessage parts
     messages: clientMessages,
   } = body as {
     agentId: string;
     conversationId?: string;
-    messages: Array<{
-      role: string;
-      content?: string;
-      parts?: Array<{ type: string; text?: string }>;
-    }>;
+    messages: UIMessage[];
   };
 
   console.log(`[POST /api/chat] agentId=${agentId} conversationId=${existingConvId ?? "new"}`);
@@ -65,11 +60,9 @@ export async function POST(req: NextRequest) {
   // Get or create conversation
   let conversationId = existingConvId;
   if (!conversationId) {
-    // Get first user message text for title
     const firstMsg = clientMessages.find((m) => m.role === "user");
-    const firstText = firstMsg?.parts?.find((p) => p.type === "text")?.text
-      ?? firstMsg?.content
-      ?? "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UIMessagePart subtypes vary
+    const firstText: string = (firstMsg?.parts?.find((p) => p.type === "text") as any)?.text ?? "";
     const title = firstText.slice(0, 60) || "New conversation";
     const conv = await prisma.conversation.create({
       data: { agentId, userId: dbUser.id, title },
@@ -80,11 +73,9 @@ export async function POST(req: NextRequest) {
   // Build tool set
   const tools = await buildToolset(agent, conversationId);
 
-  // Convert messages to CoreMessage format
-  const coreMessages: ModelMessage[] = clientMessages.map((m) => {
-    const text = m.parts?.find((p) => p.type === "text")?.text ?? m.content ?? "";
-    return { role: m.role as "user" | "assistant", content: text };
-  });
+  // Use the official SDK utility to convert UIMessage[] → ModelMessage[].
+  // Handles text, images, file attachments, tool calls/results correctly.
+  const coreMessages = await convertToModelMessages(clientMessages);
 
   const model = getProvider(agent.model);
 
@@ -101,10 +92,12 @@ export async function POST(req: NextRequest) {
       const allToolCalls = steps.flatMap((s) => s.toolCalls ?? []);
       const allToolResults = steps.flatMap((s) => s.toolResults ?? []);
 
-      // Persist last user message
+      // Persist last user message (extract text from parts)
       const lastUser = [...clientMessages].reverse().find((m) => m.role === "user");
       if (lastUser) {
-        const userText = lastUser.parts?.find((p) => p.type === "text")?.text ?? lastUser.content ?? "";
+        const textPart = lastUser.parts?.find((p) => p.type === "text");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UIMessagePart text field varies by part type
+        const userText: string = (textPart as any)?.text ?? "";
         if (userText) {
           await prisma.message.create({
             data: { conversationId: conversationId!, role: "user", content: userText },
