@@ -46,6 +46,10 @@ export async function POST(
 
   try {
     const output = await executeWorkflow(workflow.id, input, runId);
+    // Include a hint if output is empty so callers know to check run history
+    if (output === null || output === "" || output === undefined) {
+      console.warn(`[POST /api/webhooks/…] workflowId=${workflow.id} runId=${runId} output is empty — check /runs for node errors`);
+    }
     return NextResponse.json({ success: true, runId, output });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

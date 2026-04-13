@@ -71,20 +71,26 @@ function topologicalSort(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[] {
 /**
  * Resolve {{nodeId.output}} template references in a string.
  */
+function serialize(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "object") return JSON.stringify(val, null, 2);
+  return String(val);
+}
+
 function resolveTemplate(template: string, outputs: Map<string, unknown>): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
     const parts = key.trim().split(".");
-    if (parts[0] === "input") return outputs.get("__input__") as string ?? "";
+    if (parts[0] === "input") return serialize(outputs.get("__input__"));
 
     const nodeOutput = outputs.get(parts[0]);
-    if (parts.length === 1) return String(nodeOutput ?? "");
+    if (parts.length === 1) return serialize(nodeOutput);
 
-    // Navigate nested path
+    // Navigate nested path for dot-notation like {{nodeId.field}}
     let val: unknown = nodeOutput;
     for (let i = 1; i < parts.length; i++) {
       val = (val as Record<string, unknown>)?.[parts[i]];
     }
-    return String(val ?? "");
+    return serialize(val);
   });
 }
 
@@ -104,13 +110,11 @@ async function executeNode(
     }
 
     case "llm": {
-      const { createAnthropic } = await import("@ai-sdk/anthropic");
       const { generateText } = await import("ai");
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
       const rawPrompt = String(config.prompt ?? "{{input}}");
       let prompt = resolveTemplate(rawPrompt, outputs);
       const systemPrompt = String(config.systemPrompt ?? "You are a helpful assistant.");
-      const model = String(config.model ?? "claude-haiku-4-5-20251001");
+      const modelId = String(config.model ?? "claude-haiku-4-5-20251001");
 
       // If the template resolved to empty (e.g. wrong node ID referenced),
       // fall back to the last preceding node's output so the run doesn't fail silently
@@ -126,8 +130,20 @@ async function executeNode(
         );
       }
 
+      // Route to the correct provider based on model name prefix
+      let model;
+      if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3")) {
+        const { createOpenAI } = await import("@ai-sdk/openai");
+        const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+        model = openai(modelId);
+      } else {
+        const { createAnthropic } = await import("@ai-sdk/anthropic");
+        const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+        model = anthropic(modelId);
+      }
+
       const { text } = await generateText({
-        model: anthropic(model),
+        model,
         system: systemPrompt,
         prompt,
         maxOutputTokens: Number(config.maxTokens ?? 1024),
@@ -178,19 +194,26 @@ async function executeNode(
     }
 
     case "output": {
-      const template = String(config.template ?? "{{input}}");
+      const rawTemplate = config.template;
+      const template = (typeof rawTemplate === "string" && rawTemplate.trim()) ? rawTemplate : "{{input}}";
       const format = String(config.format ?? "text");
 
       let resolved: unknown;
 
-      // Default {{input}} template: use the last preceding node's output rather than
-      // just the trigger input, so the output node "passes through" the pipeline result.
+      // Default {{input}} template: find the last node output that has meaningful content.
+      // Skip trigger nodes and empty values so we don't return "" when LLM ran successfully.
       if (template === "{{input}}") {
-        const nonInputEntries = [...outputs.entries()].filter(([k]) => k !== "__input__");
-        if (nonInputEntries.length > 0) {
-          resolved = nonInputEntries[nonInputEntries.length - 1][1];
+        const candidates = [...outputs.entries()].filter(
+          ([k, v]) => k !== "__input__" && !k.startsWith("trigger_") && v !== null && v !== undefined && v !== ""
+        );
+        if (candidates.length > 0) {
+          resolved = candidates[candidates.length - 1][1];
         } else {
-          resolved = outputs.get("__input__") ?? null;
+          // Fall back to any non-input entry, then raw input
+          const anyEntries = [...outputs.entries()].filter(([k]) => k !== "__input__");
+          resolved = anyEntries.length > 0
+            ? anyEntries[anyEntries.length - 1][1]
+            : (outputs.get("__input__") ?? null);
         }
       } else {
         resolved = resolveTemplate(template, outputs);
