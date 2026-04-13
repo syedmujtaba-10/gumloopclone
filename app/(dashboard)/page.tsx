@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Agent, Workflow as PrismaWorkflow } from "@prisma/client";
 import Link from "next/link";
 import { Bot, Workflow, History, ArrowRight, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
       ])
     : [0, 0, 0];
 
-  const recentAgents = dbUser
+  const recentAgents: Agent[] = dbUser
     ? await prisma.agent.findMany({
         where: { userId: dbUser.id },
         orderBy: { updatedAt: "desc" },
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
       })
     : [];
 
-  const recentWorkflows = dbUser
+  const recentWorkflows: PrismaWorkflow[] = dbUser
     ? await prisma.workflow.findMany({
         where: { userId: dbUser.id },
         orderBy: { updatedAt: "desc" },
