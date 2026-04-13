@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agents        Agent[]
+  workflows     Workflow[]
+  conversations Conversation[]
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  emoji        String   @default("🤖")
+  systemPrompt String   @default("You are a helpful AI assistant.")
+  model        String   @default("claude-sonnet-4-6")
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(4096)
+  enabledTools String[] @default([])
+  workflowTools String[] @default([])
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  conversations Conversation[]
+
+  @@index([userId])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  sandboxId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([agentId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // "user" | "assistant" | "tool"
+  content        String       @db.Text
+  toolCalls      Json?
+  toolResults    Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Workflow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  emoji         String   @default("⚡")
+  nodes         Json     @default("[]")
+  edges         Json     @default("[]")
+  webhookSecret String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  runs WorkflowRun[]
+
+  @@index([userId])
+}
+
+model WorkflowRun {
+  id          String    @id @default(cuid())
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status      String    @default("pending") // "pending" | "running" | "success" | "error"
+  trigger     String    @default("manual") // "manual" | "webhook"
+  input       Json?
+  output      Json?
+  nodeResults Json?
+  error       String?
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([workflowId])
+}
