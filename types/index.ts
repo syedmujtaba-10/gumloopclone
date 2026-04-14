@@ -15,7 +15,8 @@ export type ToolName =
   | "http_request"
   | "sandbox_python"
   | "sandbox_shell"
-  | "sandbox_file";
+  | "sandbox_file"
+  | "image_gen";
 
 
 
@@ -55,6 +56,12 @@ export const ALL_TOOLS: { id: ToolName; label: string; description: string; icon
     label: "Web Scrape",
     description: "Scrape any URL and read its content as clean markdown",
     icon: "Globe2",
+  },
+  {
+    id: "image_gen",
+    label: "Image Generation",
+    description: "Generate images from text prompts using DALL-E 3",
+    icon: "Sparkles",
   },
 ];
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   Search, Globe, Globe2, Code2, Terminal, FolderOpen,
-  Workflow, Wrench, CheckCircle2, XCircle, Loader2,
+  Workflow, Wrench, Sparkles, CheckCircle2, XCircle, Loader2,
   ChevronDown, ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +24,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   sandbox_python:{ icon: Code2,      label: "Running Python",          color: "text-emerald-400", bg: "bg-emerald-500/15",  border: "border-emerald-500/20"},
   sandbox_shell: { icon: Terminal,   label: "Running shell command",   color: "text-orange-400",  bg: "bg-orange-500/15",   border: "border-orange-500/20" },
   sandbox_file:  { icon: FolderOpen, label: "Accessing file",          color: "text-amber-400",   bg: "bg-amber-500/15",    border: "border-amber-500/20"  },
+  image_gen:     { icon: Sparkles,   label: "Generating image",         color: "text-pink-400",    bg: "bg-pink-500/15",     border: "border-pink-500/20"   },
 };
 
 function getToolMeta(toolName: string): ToolMeta {
@@ -109,16 +110,41 @@ export function ToolCallCard({ part }: Props) {
           {isComplete && part.output !== undefined && (
             <div>
               <p className="text-white/20 mb-1 uppercase tracking-wider text-[9px] font-semibold">Output</p>
-              <pre className="text-white/40 overflow-x-auto text-[10px] leading-relaxed max-h-32 overflow-y-auto scrollbar-thin">
-                {typeof part.output === "string"
-                  ? part.output.slice(0, 500)
-                  : JSON.stringify(part.output, null, 2).slice(0, 500)}
-              </pre>
+              {/* Image generation: render inline preview */}
+              {toolName === "image_gen" && typeof part.output === "object" && part.output !== null && "url" in (part.output as Record<string, unknown>) ? (
+                (() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- image_gen output shape varies
+                  const imgOut = part.output as any;
+                  return (
+                    <div className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imgOut.url}
+                        alt={imgOut.prompt ?? "Generated image"}
+                        className="rounded-lg w-full max-w-xs border border-white/10"
+                      />
+                      {imgOut.prompt && (
+                        <p className="text-white/30 text-[10px] italic leading-relaxed">
+                          &ldquo;{String(imgOut.prompt).slice(0, 120)}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <pre className="text-white/40 overflow-x-auto text-[10px] leading-relaxed max-h-32 overflow-y-auto scrollbar-thin">
+                  {typeof part.output === "string"
+                    ? part.output.slice(0, 500)
+                    : JSON.stringify(part.output, null, 2).slice(0, 500)}
+                </pre>
+              )}
             </div>
           )}
-          {hasError && part.errorText && (
-            <p className="text-red-400/70 text-[10px]">{part.errorText}</p>
-          )}
+          {hasError && (() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- error field shape varies
+            const errMsg: string = part.errorText ?? String((part.output as any)?.error ?? "");
+            return errMsg ? <p className="text-red-400/70 text-[10px]">{errMsg}</p> : null;
+          })()}
         </div>
       )}
     </div>

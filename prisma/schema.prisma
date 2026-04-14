@@ -72,21 +72,24 @@ model Message {
 }
 
 model Workflow {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  emoji         String   @default("⚡")
-  nodes         Json     @default("[]")
-  edges         Json     @default("[]")
-  webhookSecret String?  @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  emoji          String    @default("⚡")
+  nodes          Json      @default("[]")
+  edges          Json      @default("[]")
+  webhookSecret  String?   @unique
+  cronExpression String?   // cron schedule e.g. "0 9 * * *"
+  nextRunAt      DateTime? // when the workflow should next auto-run
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   runs WorkflowRun[]
 
   @@index([userId])
+  @@index([nextRunAt]) // fast lookup for due schedules
 }
 
 model WorkflowRun {
@@ -94,7 +97,7 @@ model WorkflowRun {
   workflowId  String
   workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   status      String    @default("pending") // "pending" | "running" | "success" | "error"
-  trigger     String    @default("manual") // "manual" | "webhook"
+  trigger     String    @default("manual") // "manual" | "webhook" | "schedule"
   input       Json?
   output      Json?
   nodeResults Json?

@@ -21,6 +21,7 @@
     "ai": "^6.0.159",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "croner": "^10.0.1",
     "date-fns": "^4.1.0",
     "firecrawl": "^4.18.2",
     "lucide-react": "^1.8.0",

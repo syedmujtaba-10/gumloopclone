@@ -8,6 +8,70 @@ import { buildToolset } from "@/lib/tools";
 import { upsertUser } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+/**
+ * After convertToModelMessages, scan for assistant messages that have tool-call
+ * parts without a matching tool-result in the immediately following message.
+ * Anthropic (Claude) strictly requires tool_use → tool_result to be adjacent.
+ * Such orphans arise when a prior request errored mid-stream (tool executed but
+ * the second Anthropic call failed), leaving a half-recorded assistant message in
+ * the client's useChat state.
+ *
+ * Fix: strip orphaned tool-call parts from the assistant message. If that leaves
+ * the message empty, remove it entirely.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ModelMessage types vary across SDK versions
+function repairOrphanedToolCalls(messages: any[]): any[] {
+  const out: any[] = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
+    if (msg.role !== "assistant" || !Array.isArray(msg.content)) {
+      out.push(msg);
+      continue;
+    }
+
+    const toolCalls: string[] = msg.content
+      .filter((p: any) => p.type === "tool-call")
+      .map((p: any) => p.toolCallId as string);
+
+    if (toolCalls.length === 0) {
+      out.push(msg);
+      continue;
+    }
+
+    // Gather tool-result IDs from the immediately following message
+    const next = messages[i + 1];
+    const resultIds = new Set<string>(
+      (Array.isArray(next?.content) ? next.content : [])
+        .filter((p: any) => p.type === "tool-result")
+        .map((p: any) => p.toolCallId as string)
+    );
+
+    const orphans = new Set(toolCalls.filter((id) => !resultIds.has(id)));
+    if (orphans.size === 0) {
+      out.push(msg);
+      continue;
+    }
+
+    console.warn(
+      `[chat] repairing orphaned tool_use(s): ${[...orphans].join(", ")} — stripping from history`
+    );
+
+    // Strip orphaned tool-call parts (keep text / reasoning parts)
+    const repaired = msg.content.filter(
+      (p: any) => p.type !== "tool-call" || !orphans.has(p.toolCallId)
+    );
+
+    if (repaired.length > 0) {
+      out.push({ ...msg, content: repaired });
+    }
+    // else: drop the whole message (it was tool-call-only with no valid parts)
+  }
+
+  return out;
+}
+
 export const maxDuration = 120;
 
 function getProvider(model: string) {
@@ -73,9 +137,26 @@ export async function POST(req: NextRequest) {
   // Build tool set
   const tools = await buildToolset(agent, conversationId);
 
-  // Use the official SDK utility to convert UIMessage[] → ModelMessage[].
-  // Handles text, images, file attachments, tool calls/results correctly.
-  const coreMessages = await convertToModelMessages(clientMessages);
+  // Strip tool-call parts that never completed (state != "output-available").
+  // This can happen when a previous request errored mid-stream — the assistant
+  // message records a tool_use but the tool_result was never written. Anthropic
+  // rejects any sequence where tool_use lacks a matching tool_result.
+  const sanitizedMessages = clientMessages.map((m) => {
+    if (m.role !== "assistant" || !m.parts) return m;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UIMessagePart subtypes vary
+    const parts = (m.parts as any[]).filter((p: any) => {
+      // Keep all non-tool parts
+      if (typeof p.type !== "string" || !p.type.startsWith("tool-")) return true;
+      // Only keep tool parts that have a completed output
+      return p.state === "output-available" || p.state === "output-error";
+    });
+    return { ...m, parts };
+  });
+
+  // Convert UIMessage[] → ModelMessage[], then repair any orphaned tool-call
+  // blocks left behind by prior requests that errored mid-stream.
+  const rawMessages = await convertToModelMessages(sanitizedMessages);
+  const coreMessages = repairOrphanedToolCalls(rawMessages);
 
   const model = getProvider(agent.model);
 

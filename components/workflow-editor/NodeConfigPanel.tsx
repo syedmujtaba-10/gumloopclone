@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Node } from "reactflow";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, Clock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,17 +56,69 @@ export function NodeConfigPanel({ node, lastOutput, onUpdate, onClose }: Props) 
 
         {/* TRIGGER */}
         {nodeType === "trigger" && (
-          <div className="space-y-3">
-            <Label className="text-white/50 text-xs uppercase tracking-wider">Trigger Type</Label>
-            <Select value={String(config.triggerType ?? "manual")} onValueChange={(v) => set("triggerType", v)}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="">
-                <SelectItem value="manual">▶ Manual</SelectItem>
-                <SelectItem value="webhook">🔗 Webhook</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-white/50 text-xs uppercase tracking-wider">Trigger Type</Label>
+              <Select value={String(config.triggerType ?? "manual")} onValueChange={(v) => set("triggerType", v)}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/75">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="">
+                  <SelectItem value="manual">▶ Manual</SelectItem>
+                  <SelectItem value="webhook">🔗 Webhook</SelectItem>
+                  <SelectItem value="schedule">🕐 Schedule</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Schedule config */}
+            {String(config.triggerType) === "schedule" && (
+              <div className="space-y-3 pt-1">
+                <Label className="text-white/50 text-xs uppercase tracking-wider">Presets</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { label: "Every hour",  value: "0 * * * *"   },
+                    { label: "Daily 9am",   value: "0 9 * * *"   },
+                    { label: "Mon 9am",     value: "0 9 * * 1"   },
+                    { label: "1st of month",value: "0 9 1 * *"   },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => set("cronExpression", p.value)}
+                      className={`text-left px-2.5 py-1.5 rounded-md text-[11px] border transition-all ${
+                        config.cronExpression === p.value
+                          ? "border-violet-500/50 bg-violet-500/10 text-violet-300"
+                          : "border-white/[0.07] bg-white/[0.03] text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-white/50 text-xs uppercase tracking-wider">Cron Expression</Label>
+                  <Input
+                    value={String(config.cronExpression ?? "")}
+                    onChange={(e) => set("cronExpression", e.target.value)}
+                    placeholder="0 9 * * *"
+                    className="bg-white/5 border-white/10 text-white/75 placeholder:text-white/20 text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-white/25">
+                    Format: <span className="font-mono text-white/35">minute hour day month weekday</span>
+                  </p>
+                </div>
+
+                {/* Next run hint */}
+                {String(config.cronExpression ?? "") && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-violet-500/[0.08] border border-violet-500/15">
+                    <Clock className="w-3 h-3 text-violet-400/60 flex-shrink-0" />
+                    <span className="text-[11px] text-violet-300/60">Schedule saved when workflow auto-saves</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

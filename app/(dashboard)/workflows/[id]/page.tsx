@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, Play, Copy, Webhook, CheckCheck } from "lucide-react";
+import { Loader2, ChevronLeft, Play, Webhook, CheckCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkflowCanvas } from "@/components/workflow-editor/WorkflowCanvas";
 import Link from "next/link";
@@ -18,6 +18,7 @@ export default function WorkflowEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [running, setRunning] = useState(false);
+  const [cronExpression, setCronExpression] = useState<string | null>(null);
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, "running" | "success" | "error">>({});
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, unknown>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,12 +31,24 @@ export default function WorkflowEditorPage() {
       .then((r) => r.json())
       .then(({ data }) => {
         setWorkflow(data);
+        setCronExpression(data?.cronExpression ?? null);
         setLoading(false);
         if (data?.name) document.title = `${data.emoji ?? ""} ${data.name} — Gumloop`;
       })
       .catch(() => { toast.error("Failed to load workflow"); router.push("/workflows"); });
     return () => { document.title = "Gumloop — AI Automation Platform"; };
   }, [id, router]);
+
+  /** Extract the cron expression from the trigger node (if schedule type). */
+  function extractCron(nodes: Node[]): string | null {
+    const trigger = nodes.find((n) => n.data?.nodeType === "trigger" || n.type === "trigger");
+    if (!trigger) return null;
+    const cfg = trigger.data?.config ?? {};
+    if (cfg.triggerType !== "schedule") return null;
+    return (typeof cfg.cronExpression === "string" && cfg.cronExpression.trim())
+      ? cfg.cronExpression.trim()
+      : null;
+  }
 
   const saveNodes = useCallback((nodes: Node[], edges: Edge[]) => {
     // Keep refs current so Cmd+S always saves the latest canvas state
@@ -46,18 +59,20 @@ export default function WorkflowEditorPage() {
     setSaved(false);
     saveTimer.current = setTimeout(async () => {
       setSaving(true);
+      const cron = extractCron(nodes);
       const res = await fetch(`/api/workflows/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify({ nodes, edges, cronExpression: cron }),
       });
       setSaving(false);
       if (res.ok) {
+        setCronExpression(cron);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
     }, 1000);
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async () => {
     const nodes = latestNodesRef.current;
@@ -65,17 +80,19 @@ export default function WorkflowEditorPage() {
     if (!nodes.length && !edges.length) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaving(true);
+    const cron = extractCron(nodes);
     const res = await fetch(`/api/workflows/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nodes, edges }),
+      body: JSON.stringify({ nodes, edges, cronExpression: cron }),
     });
     setSaving(false);
     if (res.ok) {
+      setCronExpression(cron);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -103,15 +120,20 @@ export default function WorkflowEditorPage() {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    // Buffer incomplete SSE lines across chunks — large node outputs (e.g. scraped
+    // Wikipedia pages) can span multiple read() calls and must be reassembled.
+    let sseBuffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const text = decoder.decode(value);
-      const lines = text.split("\n").filter((l) => l.startsWith("data: "));
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      // Keep the last (potentially incomplete) line in the buffer
+      sseBuffer = lines.pop() ?? "";
 
-      for (const line of lines) {
+      for (const line of lines.filter((l) => l.startsWith("data: "))) {
         try {
           const event = JSON.parse(line.slice(6));
           if (event.nodeId) {
@@ -179,6 +201,12 @@ export default function WorkflowEditorPage() {
           {saved && !saving && (
             <span className="text-xs text-emerald-400/60 flex items-center gap-1">
               <CheckCheck className="w-3 h-3" /> Saved
+            </span>
+          )}
+          {cronExpression && (
+            <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-violet-500/10 border border-violet-500/20 text-[11px] text-violet-300/70 font-mono">
+              <Clock className="w-3 h-3" />
+              {cronExpression}
             </span>
           )}
           <Button
