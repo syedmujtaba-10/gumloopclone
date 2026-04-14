@@ -13,9 +13,7 @@ export type ToolName =
   | "web_search"
   | "web_scrape"
   | "http_request"
-  | "sandbox_python"
-  | "sandbox_shell"
-  | "sandbox_file"
+  | "sandbox"
   | "image_gen";
 
 
@@ -34,22 +32,10 @@ export const ALL_TOOLS: { id: ToolName; label: string; description: string; icon
     icon: "Globe",
   },
   {
-    id: "sandbox_python",
-    label: "Python Sandbox",
-    description: "Run Python code in an isolated VM",
-    icon: "Code2",
-  },
-  {
-    id: "sandbox_shell",
-    label: "Shell Sandbox",
-    description: "Execute bash commands in an isolated VM",
+    id: "sandbox",
+    label: "Sandbox",
+    description: "Run Python, shell commands, and read/write files in an isolated VM",
     icon: "Terminal",
-  },
-  {
-    id: "sandbox_file",
-    label: "File Sandbox",
-    description: "Read and write files in the VM filesystem",
-    icon: "FolderOpen",
   },
   {
     id: "web_scrape",

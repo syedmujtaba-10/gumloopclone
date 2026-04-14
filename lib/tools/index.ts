@@ -34,13 +34,14 @@ export async function buildToolset(agent: Agent, conversationId: string): Promis
       case "http_request":
         tools.http_request = httpRequestTool;
         break;
+      // "sandbox" enables all three sub-tools at once.
+      // Old per-tool names kept as aliases for existing agents.
+      case "sandbox":
       case "sandbox_python":
-        tools.sandbox_python = sandboxPythonTool(conversationId);
-        break;
       case "sandbox_shell":
-        tools.sandbox_shell = sandboxShellTool(conversationId);
-        break;
       case "sandbox_file":
+        tools.sandbox_python = sandboxPythonTool(conversationId);
+        tools.sandbox_shell = sandboxShellTool(conversationId);
         tools.sandbox_file = sandboxFileTool(conversationId);
         break;
     }
