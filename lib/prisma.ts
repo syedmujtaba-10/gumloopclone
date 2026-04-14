@@ -7,8 +7,14 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
+  // In serverless environments each invocation can spin up its own pool.
+  // Use a single connection per pool instance and let the Supabase transaction-
+  // mode pooler (port 6543) multiplex across many concurrent invocations.
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
+    max: 1,           // one connection per serverless instance
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
