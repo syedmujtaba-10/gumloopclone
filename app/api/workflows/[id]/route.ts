@@ -9,8 +9,6 @@ const UpdateWorkflowSchema = z.object({
   emoji: z.string().optional(),
   nodes: z.array(z.any()).optional(),
   edges: z.array(z.any()).optional(),
-  // null = clear the schedule, string = set/update the schedule
-  cronExpression: z.string().nullable().optional(),
 });
 
 async function getOwnedWorkflow(workflowId: string, userEmail: string) {
@@ -54,31 +52,11 @@ export async function PUT(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  console.log(`[PUT /api/workflows/${id}] cron=${parsed.data.cronExpression ?? "none"}`);
-
-  // Calculate nextRunAt when cron is set/changed; clear it when cron is removed
-  let nextRunAt: Date | null | undefined = undefined; // undefined = don't touch
-  if ("cronExpression" in parsed.data) {
-    if (parsed.data.cronExpression) {
-      try {
-        const { Cron } = await import("croner");
-        nextRunAt = new Cron(parsed.data.cronExpression).nextRun() ?? null;
-      } catch {
-        return NextResponse.json({ error: "Invalid cron expression" }, { status: 400 });
-      }
-    } else {
-      nextRunAt = null; // clear schedule
-    }
-  }
-
-  const updateData = {
-    ...parsed.data,
-    ...(nextRunAt !== undefined ? { nextRunAt } : {}),
-  };
+  console.log(`[PUT /api/workflows/${id}]`);
 
   const updated = await prisma.workflow.update({
     where: { id },
-    data: updateData,
+    data: parsed.data,
   });
 
   return NextResponse.json({ data: updated });
